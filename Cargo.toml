@@ -1,0 +1,33 @@
+[package]
+name = "id_based_self_encryption"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rayon = "1.5.1"
+xor_name = "4.0.1"
+self_encryption = "0.27.4"
+docopt = "~0.9.0"
+rand = "~0.8.5"
+getrandom = { version = "0.2", features = ["js"] }
+
+[dependencies.tiny-keccak]
+version = "~2.0"
+features = [ "sha3" ]
+
+[dependencies.bytes]
+version = "1.1.0"
+features = ["serde"]
+
+[dependencies.serde]
+version = "1.0.136"
+features = ["derive"]
+
+[dependencies.tokio]
+version = "1.17.0"
+features = ["macros", "sync", "io-util", "rt", "rt-multi-thread"]
+
+[lib]
+crate-type = ["cdylib"]
