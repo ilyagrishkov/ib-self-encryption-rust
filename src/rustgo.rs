@@ -1,6 +1,7 @@
 use std::ffi::{c_void, CStr, CString};
-use std::mem;
+use std::{mem, slice, str};
 use std::os::raw::{c_char, c_int};
+use libc::strlen;
 
 #[no_mangle]
 pub extern fn allocate(size: usize) -> *mut c_void {
@@ -21,6 +22,14 @@ pub extern fn deallocate(pointer: *mut c_void, capacity: usize) {
 pub fn get_string(ptr: *mut c_char) -> String {
     let subject = unsafe { CStr::from_ptr(ptr).to_bytes().to_vec() };
     String::from_utf8(subject).unwrap()
+}
+
+pub fn get_string2(ptr: *mut c_char) -> String {
+    let s = unsafe {
+        println!("{}", strlen(ptr));
+        str::from_utf8_unchecked(slice::from_raw_parts(ptr as *const u8, strlen(ptr)+1))
+    };
+    String::from(s)
 }
 
 pub fn get_byte_vec(ptr: *mut u8, size: usize) -> Vec<u8> {
