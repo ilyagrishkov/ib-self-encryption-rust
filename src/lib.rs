@@ -1,24 +1,3 @@
-// use std::os::raw::{c_char, c_void};
-// use crate::rustgo::{get_string, return_byte_vec, return_string};
-//
-//
-// #[no_mangle]
-// pub extern fn greet(subject: *mut c_char) -> *mut c_char {
-//     let string = get_string(subject);
-//     let mut output = b"Hello, ".to_vec();
-//     output.extend(&string.into_bytes());
-//     output.extend(&[b'!']);
-//
-//     return_string(String::from_utf8(output).unwrap())
-// }
-//
-// #[no_mangle]
-// pub extern fn array(size: *mut c_char) -> *mut c_void {
-//     let mut buffer: Vec<u8> = vec![1, 2, 3, 4, 5];
-//     return_byte_vec(buffer, size)
-// }
-
-// //! Basic example usage of a `SelfEncryptor`.
 use std::{
     env,
     fmt::{self},
@@ -149,7 +128,6 @@ pub extern fn self_encrypt(filepath_ptr: *mut c_char) -> () {
             Err(error) => return println!("{}", error),
         }
 
-        println!("REACHED1");
         let (data_map, encrypted_chunks) = encrypt(Bytes::from(data)).unwrap();
 
         let result = encrypted_chunks

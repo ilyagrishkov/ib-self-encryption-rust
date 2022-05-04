@@ -10,7 +10,6 @@ use crate::self_encryption::lib::{get_pad_key_and_iv, xor, EncryptedChunk, Error
 use crate::self_encryption::encryption;
 use bytes::Bytes;
 use itertools::Itertools;
-use rayon::prelude::*;
 use std::io::Cursor;
 use std::sync::Arc;
 use xor_name::XorName;
@@ -35,7 +34,7 @@ pub fn decrypt(src_hashes: Vec<XorName>, encrypted_chunks: Vec<EncryptedChunk>) 
         .map(|batch| {
             batch
                 .jobs
-                .par_iter()
+                .iter()
                 .map(|c| {
                     Ok::<(usize, Bytes), Error>((
                         c.index,

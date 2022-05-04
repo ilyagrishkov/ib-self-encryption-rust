@@ -12,7 +12,6 @@ use std::sync::Arc;
 use brotli::enc::BrotliEncoderParams;
 use bytes::Bytes;
 use itertools::Itertools;
-use rayon::prelude::*;
 use xor_name::XorName;
 
 use crate::self_encryption::{
@@ -38,7 +37,6 @@ pub(crate) fn encrypt(batches: Vec<EncryptionBatch>) -> (DataMap, Vec<EncryptedC
     let (keys, chunks) = batches
         .into_iter()
         .map(|batch| (batch, src_hashes.clone()))
-        .par_bridge()
         .map(|(batch, src_hashes)| {
             batch
                 .raw_chunks
@@ -48,10 +46,10 @@ pub(crate) fn encrypt(batches: Vec<EncryptionBatch>) -> (DataMap, Vec<EncryptedC
 
                     let src_size = data.len();
                     let pki = get_pad_key_and_iv(index, src_hashes.as_ref());
-                    let encrypted_content = encrypt_chunk(data, pki)?;
+                    let encrypted_content = encrypt_chunk(data, pki).unwrap();
                     let dst_hash = XorName::from_content(encrypted_content.as_ref());
 
-                    Ok((
+                    (
                         ChunkInfo {
                             index,
                             dst_hash,
@@ -62,25 +60,12 @@ pub(crate) fn encrypt(batches: Vec<EncryptionBatch>) -> (DataMap, Vec<EncryptedC
                             index,
                             content: encrypted_content,
                         },
-                    ))
+                    )
                 })
-                .collect::<Vec<_>>()
+                .collect::<Vec<(ChunkInfo, EncryptedChunk)>>()
         })
         .flatten()
-        .fold(|| (vec![], vec![]), |(mut keys, mut chunks), result: Result<_, Error>| {
-            if let Ok((key, chunk)) = result {
-                keys.push(key);
-                chunks.push(chunk);
-            }
-            (keys, chunks)
-        },
-        )
-        .reduce(|| (vec![], vec![]), |(mut keys, mut chunks), (key_subset, chunk_subset)| {
-            keys.extend(key_subset);
-            chunks.extend(chunk_subset);
-            (keys, chunks)
-        },
-        );
+        .unzip();
 
     (DataMap::new(keys), chunks)
 }

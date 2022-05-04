@@ -56,7 +56,7 @@ use xor_name::XorName;
 pub use bytes;
 use serde::Serialize;
 pub use xor_name;
-use crate::self_encryption::{chunk, decrypt};
+use crate::self_encryption::{chunk, decrypt, encrypt};
 
 /// The minimum size (before compression) of data to be self-encrypted, defined as 3kB.
 pub const MIN_ENCRYPTABLE_BYTES: usize = 3 * MIN_CHUNK_SIZE;
