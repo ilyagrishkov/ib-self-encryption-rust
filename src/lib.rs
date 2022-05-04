@@ -160,7 +160,6 @@ pub extern fn self_encrypt(filepath_ptr: *mut c_char) -> () {
 #[no_mangle]
 pub extern fn self_decrypt() -> () {
     // let filepath = get_string(filepath_ptr);
-    println!("0");
     let mut chunk_store_dir = env::current_dir().unwrap();
     chunk_store_dir.push("chunk_store_test/");
     let _ = fs::create_dir(chunk_store_dir.clone());
@@ -169,7 +168,6 @@ pub extern fn self_decrypt() -> () {
 
     let mut data_map_file = chunk_store_dir;
     data_map_file.push("data_map");
-    println!("1");
     if let Ok(mut file) = File::open(data_map_file.to_str().unwrap()) {
         let mut data = Vec::new();
         let _ = file.read_to_end(&mut data).unwrap();
@@ -195,7 +193,6 @@ pub extern fn self_decrypt() -> () {
                         chunks.push(chunk);
                         (keys, chunks)
                     });
-                println!("Test");
                 let write_path = format!("{}{}", env::current_dir().unwrap().to_str().unwrap(), "res.txt");
                 if let Ok(mut file) = File::create(write_path.clone()) {
                     let content =
