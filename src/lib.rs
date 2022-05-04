@@ -12,7 +12,7 @@ use std::os::raw::c_char;
 use bytes::Bytes;
 use docopt::Docopt;
 use crate::self_encryption::lib::{
-    self, DataMap, decrypt_full_set, encrypt, EncryptedChunk, Error, Result, serialise,
+    self, DataMap, decrypt_full_set, encrypt, EncryptedChunk, Error, Result, serialise, deserialise
 };
 
 use serde::Deserialize;
@@ -88,12 +88,6 @@ impl DiskBasedStorage {
 }
 
 #[no_mangle]
-pub extern fn test(num: i32) -> i32 {
-    println!("{}", num);
-    num
-}
-
-#[no_mangle]
 pub extern fn greet(subject: *mut c_char) -> *mut c_char {
     let string = get_string(subject);
     let string2 = get_string2(subject);
@@ -160,5 +154,68 @@ pub extern fn self_encrypt(filepath_ptr: *mut c_char) -> () {
         }
     } else {
         println!("Failed to open {}", &filepath);
+    }
+}
+
+#[no_mangle]
+pub extern fn self_decrypt() -> () {
+    // let filepath = get_string(filepath_ptr);
+    println!("0");
+    let mut chunk_store_dir = env::current_dir().unwrap();
+    chunk_store_dir.push("chunk_store_test/");
+    let _ = fs::create_dir(chunk_store_dir.clone());
+    let storage_path = chunk_store_dir.to_str().unwrap().to_owned();
+    let storage = Arc::new(DiskBasedStorage { storage_path });
+
+    let mut data_map_file = chunk_store_dir;
+    data_map_file.push("data_map");
+    println!("1");
+    if let Ok(mut file) = File::open(data_map_file.to_str().unwrap()) {
+        let mut data = Vec::new();
+        let _ = file.read_to_end(&mut data).unwrap();
+        match deserialise::<DataMap>(&data) {
+            Ok(data_map) => {
+                let (keys, encrypted_chunks) = data_map
+                    .infos()
+                    .iter()
+                    .map(|key| {
+                        Ok::<(_, _), Error>((
+                            key.clone(),
+                            EncryptedChunk {
+                                index: key.index,
+                                content: storage.get(key.dst_hash)?,
+                            },
+                        ))
+                    })
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .flatten()
+                    .fold((vec![], vec![]), |(mut keys, mut chunks), (key, chunk)| {
+                        keys.push(key);
+                        chunks.push(chunk);
+                        (keys, chunks)
+                    });
+                println!("Test");
+                let write_path = format!("{}{}", env::current_dir().unwrap().to_str().unwrap(), "res.txt");
+                if let Ok(mut file) = File::create(write_path.clone()) {
+                    let content =
+                        decrypt_full_set(&DataMap::new(keys), encrypted_chunks.as_ref())
+                            .unwrap();
+                    match file.write_all(&content[..]) {
+                        Err(error) => println!("File write failed - {:?}", error),
+                        Ok(_) => {
+                            println!("File decrypted to {:?}", write_path)
+                        }
+                    };
+                } else {
+                    println!("Failed to create {}", (write_path));
+                }
+            }
+            Err(_) => {
+                println!("Failed to parse data map - possible corruption");
+            }
+        }
+    } else {
+        println!("Failed to open data map at {:?}", data_map_file);
     }
 }

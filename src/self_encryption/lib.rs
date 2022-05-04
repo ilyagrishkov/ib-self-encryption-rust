@@ -54,6 +54,7 @@ use xor_name::XorName;
 
 // export these because they are used in our public API.
 pub use bytes;
+use serde::de::DeserializeOwned;
 use serde::Serialize;
 pub use xor_name;
 use crate::self_encryption::{chunk, decrypt, encrypt};
@@ -80,6 +81,16 @@ pub struct EncryptedChunk {
 
 pub fn serialise<T: Serialize>(data: &T) -> Result<Vec<u8>, Error> {
     Ok(bincode::serialize(data)?)
+}
+
+pub fn deserialise<T>(data: &[u8]) -> Result<T, Error>
+    where
+        T: Serialize + DeserializeOwned,
+{
+    match bincode::deserialize(data) {
+        Ok(data) => Ok(data),
+        Err(_) => Err(Error::Deserialise),
+    }
 }
 
 /// Encrypts a set of bytes and returns the encrypted data together with
