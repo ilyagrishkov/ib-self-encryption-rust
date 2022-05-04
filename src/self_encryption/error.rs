@@ -19,8 +19,6 @@ pub type Result<T, E = Error> = std::result::Result<T, E>;
 pub enum Error {
     #[error(display = "An error during compression or decompression.")]
     Compression,
-    #[error(display = "An error during initializing CBC-AES cipher instance.")]
-    Cipher(String),
     #[error(display = "An error within the symmetric encryption process.")]
     Encryption,
     #[error(display = "An error within the symmetric decryption process({})", _0)]
@@ -37,6 +35,4 @@ pub enum Error {
     NumParse(#[source] std::num::ParseIntError),
     #[error(display = "Rng error")]
     Rng(#[source] rand::Error),
-    #[error(display = "Unable to obtain lock")]
-    Poison,
 }

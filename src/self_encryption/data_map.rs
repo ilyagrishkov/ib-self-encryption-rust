@@ -31,6 +31,7 @@ impl DataMap {
     }
 
     /// Original (pre-encryption) size of the file.
+    #[allow(dead_code)]
     pub fn file_size(&self) -> usize {
         DataMap::total_size(&self.0)
     }
@@ -41,6 +42,7 @@ impl DataMap {
     }
 
     /// Iterates through the keys to figure out the total size of the data, i.e. the file size.
+    #[allow(dead_code)]
     fn total_size(keys: &[ChunkInfo]) -> usize {
         keys.iter().fold(0, |acc, chunk| acc + chunk.src_size)
     }

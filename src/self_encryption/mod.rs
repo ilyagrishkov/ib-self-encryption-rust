@@ -1,5 +1,4 @@
 pub(crate) mod lib;
-mod pkg;
 mod error;
 mod encryption;
 mod encrypt;

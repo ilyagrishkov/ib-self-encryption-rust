@@ -49,7 +49,6 @@ pub use crate::self_encryption::{
 };
 use bytes::Bytes;
 use itertools::Itertools;
-use std::ops::Range;
 use xor_name::XorName;
 
 // export these because they are used in our public API.
@@ -124,34 +123,6 @@ pub fn decrypt_full_set(data_map: &DataMap, chunks: &[EncryptedChunk]) -> Result
     decrypt::decrypt(src_hashes, sorted_chunks)
 }
 
-/// Decrypts a range, used when seeking.
-///
-/// `relative_pos` is the position within the first read chunk, that we start reading from.
-pub fn decrypt_range(
-    data_map: &DataMap,
-    chunks: &[EncryptedChunk],
-    relative_pos: usize,
-    len: usize,
-) -> Result<Bytes> {
-    let src_hashes = extract_hashes(data_map);
-    let encrypted_chunks = chunks
-        .iter()
-        .sorted_by_key(|c| c.index)
-        .cloned()
-        .collect_vec();
-    let mut bytes = decrypt::decrypt(src_hashes, encrypted_chunks)?;
-
-    if relative_pos >= bytes.len() {
-        return Ok(Bytes::new());
-    }
-
-    // truncate taking care of overflows
-    let _ = bytes.split_to(relative_pos);
-    bytes.truncate(len);
-
-    Ok(bytes)
-}
-
 /// Helper function to XOR a data with a pad (pad will be rotated to fill the length)
 pub(crate) fn xor(data: Bytes, &Pad(pad): &Pad) -> Bytes {
     let vec: Vec<_> = data
@@ -160,56 +131,6 @@ pub(crate) fn xor(data: Bytes, &Pad(pad): &Pad) -> Bytes {
         .map(|(&a, &b)| a ^ b)
         .collect();
     Bytes::from(vec)
-}
-
-/// Helper struct for seeking
-/// original file bytes from chunks.
-pub struct SeekInfo {
-    /// Start and end index for the chunks
-    /// covered by a pos and len.
-    pub index_range: Range<usize>,
-    /// The start pos of first chunk.
-    /// The position is relative to the
-    /// byte content of that chunk, not the whole file.
-    pub relative_pos: usize,
-}
-
-/// Helper function for getting info needed
-/// to seek original file bytes from chunks.
-///
-/// It is used to first fetch chunks using the `index_range`.
-/// Then the chunks are passed into `self_encryption::decrypt_range` together
-/// with `relative_pos` from the `SeekInfo` instance, and the `len` to be read.
-pub fn seek_info(file_size: usize, pos: usize, len: usize) -> SeekInfo {
-    let (start_index, end_index) = overlapped_chunks(file_size, pos, len);
-    SeekInfo {
-        index_range: start_index..end_index,
-        relative_pos: pos % get_chunk_size(file_size, start_index),
-    }
-}
-
-// ------------------------------------------------------------------------------
-//   ---------------------- Private methods -----------------------------------
-// ------------------------------------------------------------------------------
-
-/// Returns the chunk index range [start, end) that is overlapped by the byte range defined by `pos`
-/// and `len`. Returns empty range if `file_size` is so small that there are no chunks.
-fn overlapped_chunks(file_size: usize, pos: usize, len: usize) -> (usize, usize) {
-    // FIX THIS SHOULD NOT BE ALLOWED
-    if file_size < (3 * MIN_CHUNK_SIZE) || pos >= file_size || len == 0 {
-        return (0, 0);
-    }
-
-    // calculate end position taking care of overflows
-    let end = match pos.checked_add(len) {
-        Some(end) => end,
-        None => file_size,
-    };
-
-    let start_index = get_chunk_index(file_size, pos);
-    let end_index = get_chunk_index(file_size, end);
-
-    (start_index, end_index)
 }
 
 fn extract_hashes(data_map: &DataMap) -> Vec<XorName> {
@@ -316,21 +237,3 @@ fn get_start_position(file_size: usize, chunk_index: usize) -> usize {
     }
 }
 
-fn get_chunk_index(file_size: usize, position: usize) -> usize {
-    let num_chunks = get_num_chunks(file_size);
-    if num_chunks == 0 {
-        return 0; // FIX THIS SHOULD NOT BE ALLOWED
-    }
-
-    let chunk_size = get_chunk_size(file_size, 0);
-    let remainder = file_size % chunk_size;
-
-    if remainder == 0
-        || remainder >= MIN_CHUNK_SIZE
-        || position < file_size - remainder - MIN_CHUNK_SIZE
-    {
-        usize::min(position / chunk_size, num_chunks - 1)
-    } else {
-        num_chunks - 1
-    }
-}

@@ -10,39 +10,17 @@ use std::{
 use std::os::raw::c_char;
 
 use bytes::Bytes;
-use docopt::Docopt;
 use crate::self_encryption::lib::{
-    self, DataMap, decrypt_full_set, encrypt, EncryptedChunk, Error, Result, serialise, deserialise
+    DataMap, decrypt_full_set, encrypt, EncryptedChunk, Error, Result, serialise, deserialise
 };
 
-use serde::Deserialize;
 use xor_name::XorName;
 
-use crate::rustgo::{allocate, deallocate, get_byte_vec, get_string, get_string2, return_string};
+#[allow(unused_imports)]
+use crate::rustgo::{allocate, deallocate, get_byte_vec, get_string, return_string};
 
 mod rustgo;
 mod self_encryption;
-
-#[rustfmt::skip]
-static USAGE: &str = "
-Usage: basic_encryptor -h
-       basic_encryptor -e <target>
-       basic_encryptor -d <target> <destination>
-
-Options:
-    -h, --help      Display this message.
-    -e, --encrypt   Encrypt a file.
-    -d, --decrypt   Decrypt a file.
-";
-
-#[derive(Debug, Deserialize)]
-struct Args {
-    arg_target: Option<String>,
-    arg_destination: Option<String>,
-    flag_encrypt: bool,
-    flag_decrypt: bool,
-    flag_help: bool,
-}
 
 fn to_hex(ch: u8) -> String {
     fmt::format(format_args!("{:02x}", ch))
@@ -85,21 +63,6 @@ impl DiskBasedStorage {
             })
             .map_err(From::from)
     }
-}
-
-#[no_mangle]
-pub extern fn greet(subject: *mut c_char) -> *mut c_char {
-    let string = get_string(subject);
-    let string2 = get_string2(subject);
-    let bytes = get_byte_vec(subject as *mut u8, 35);
-    println!("{}", string);
-    println!("{}", string2);
-    println!("{:?}", bytes);
-    let mut output = b"Hello, ".to_vec();
-    output.extend(&string.into_bytes());
-    output.extend(&[b'!']);
-
-    return_string(String::from_utf8(output).unwrap())
 }
 
 #[no_mangle]
