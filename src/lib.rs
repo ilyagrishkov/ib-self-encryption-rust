@@ -8,6 +8,7 @@ use std::{
     sync::Arc,
 };
 use std::os::raw::c_char;
+use std::path::Path;
 
 use bytes::Bytes;
 use crate::self_encryption::lib::{
@@ -70,7 +71,7 @@ pub extern fn self_encrypt(filepath_ptr: *mut c_char) -> () {
     let filepath = get_string(filepath_ptr);
 
     let mut chunk_store_dir = env::current_dir().unwrap();
-    chunk_store_dir.push("chunk_store_test/");
+    chunk_store_dir.push("chunk_store/");
     let _ = fs::create_dir(chunk_store_dir.clone());
     let storage_path = chunk_store_dir.to_str().unwrap().to_owned();
     let storage = Arc::new(DiskBasedStorage { storage_path });
@@ -121,10 +122,12 @@ pub extern fn self_encrypt(filepath_ptr: *mut c_char) -> () {
 }
 
 #[no_mangle]
-pub extern fn self_decrypt() -> () {
-    // let filepath = get_string(filepath_ptr);
+pub extern fn self_decrypt(destination: *mut c_char) -> () {
+    let dst = get_string(destination);
+    let dst_file = Path::new(&dst).file_name().unwrap().to_str().unwrap();
+
     let mut chunk_store_dir = env::current_dir().unwrap();
-    chunk_store_dir.push("chunk_store_test/");
+    chunk_store_dir.push("chunk_store/");
     let _ = fs::create_dir(chunk_store_dir.clone());
     let storage_path = chunk_store_dir.to_str().unwrap().to_owned();
     let storage = Arc::new(DiskBasedStorage { storage_path });
@@ -156,7 +159,7 @@ pub extern fn self_decrypt() -> () {
                         chunks.push(chunk);
                         (keys, chunks)
                     });
-                let write_path = format!("{}{}", env::current_dir().unwrap().to_str().unwrap(), "res.txt");
+                let write_path = format!("{}{}", env::current_dir().unwrap().to_str().unwrap(), dst_file);
                 if let Ok(mut file) = File::create(write_path.clone()) {
                     let content =
                         decrypt_full_set(&DataMap::new(keys), encrypted_chunks.as_ref())
