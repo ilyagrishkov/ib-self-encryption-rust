@@ -14,7 +14,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 use xor_name::XorName;
 
-pub fn decrypt(src_hashes: Vec<XorName>, encrypted_chunks: Vec<EncryptedChunk>) -> Result<Bytes> {
+pub fn decrypt(src_hashes: Vec<XorName>, encrypted_chunks: Vec<EncryptedChunk>, identity: String) -> Result<Bytes> {
     let src_hashes = Arc::new(src_hashes);
     let num_chunks = encrypted_chunks.len();
     let batch_size = usize::max(1, (num_chunks as f64 / 4 as f64).ceil() as usize);
@@ -38,7 +38,7 @@ pub fn decrypt(src_hashes: Vec<XorName>, encrypted_chunks: Vec<EncryptedChunk>) 
                 .map(|c| {
                     Ok::<(usize, Bytes), Error>((
                         c.index,
-                        decrypt_chunk(c.index, c.encrypted_content.clone(), c.src_hashes.as_ref())?,
+                        decrypt_chunk(c.index, c.encrypted_content.clone(), c.src_hashes.as_ref(), identity.clone())?,
                     ))
                 })
                 .collect::<Vec<_>>()
@@ -74,14 +74,10 @@ struct DecryptionJob {
     src_hashes: Arc<Vec<XorName>>,
 }
 
-pub(crate) fn decrypt_chunk(
-    chunk_number: usize,
-    content: Bytes,
-    chunk_hashes: &[XorName],
-) -> Result<Bytes> {
+pub(crate) fn decrypt_chunk(chunk_number: usize, content: Bytes, chunk_hashes: &[XorName], identity: String) -> Result<Bytes> {
     let (pad, key, iv) = get_pad_key_and_iv(chunk_number, chunk_hashes);
     let xor_result = xor(content, &pad);
-    let decrypted = encryption::decrypt(xor_result, &key, &iv)?;
+    let decrypted = encryption::decrypt(xor_result, &key, &iv, identity)?;
     let mut decompressed = vec![];
     brotli::BrotliDecompress(&mut Cursor::new(decrypted), &mut decompressed)
         .map(|_| Bytes::from(decompressed))

@@ -67,8 +67,9 @@ impl DiskBasedStorage {
 }
 
 #[no_mangle]
-pub extern fn self_encrypt(filepath_ptr: *mut c_char) -> () {
+pub extern fn self_encrypt(filepath_ptr: *mut c_char, identity_ptr: *mut c_char) -> () {
     let filepath = get_string(filepath_ptr);
+    let identity = get_string(identity_ptr);
 
     let mut chunk_store_dir = env::current_dir().unwrap();
     chunk_store_dir.push("chunk_store/");
@@ -86,7 +87,7 @@ pub extern fn self_encrypt(filepath_ptr: *mut c_char) -> () {
             Err(error) => return println!("{}", error),
         }
 
-        let (data_map, encrypted_chunks) = encrypt(Bytes::from(data)).unwrap();
+        let (data_map, encrypted_chunks) = encrypt(Bytes::from(data), identity).unwrap();
 
         let result = encrypted_chunks
             .iter()
@@ -122,8 +123,9 @@ pub extern fn self_encrypt(filepath_ptr: *mut c_char) -> () {
 }
 
 #[no_mangle]
-pub extern fn self_decrypt(destination: *mut c_char) -> () {
+pub extern fn self_decrypt(destination: *mut c_char, identity_ptr: *mut c_char) -> () {
     let dst = get_string(destination);
+    let identity = get_string(identity_ptr);
     let dst_file = Path::new(&dst).file_name().unwrap().to_str().unwrap();
 
     let mut chunk_store_dir = env::current_dir().unwrap();
@@ -162,7 +164,7 @@ pub extern fn self_decrypt(destination: *mut c_char) -> () {
                 let write_path = format!("{}{}", env::current_dir().unwrap().to_str().unwrap(), dst_file);
                 if let Ok(mut file) = File::create(write_path.clone()) {
                     let content =
-                        decrypt_full_set(&DataMap::new(keys), encrypted_chunks.as_ref())
+                        decrypt_full_set(&DataMap::new(keys), encrypted_chunks.as_ref(), identity)
                             .unwrap();
                     match file.write_all(&content[..]) {
                         Err(error) => println!("File write failed - {:?}", error),

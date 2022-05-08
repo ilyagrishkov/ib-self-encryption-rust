@@ -37,13 +37,15 @@ pub(crate) struct Key(pub [u8; KEY_SIZE]);
 /// https://en.wikipedia.org/wiki/Initialization_vector
 pub(crate) struct Iv(pub [u8; IV_SIZE]);
 
-pub(crate) fn encrypt(data: Bytes, key: &Key, iv: &Iv) -> Result<Bytes, Error> {
-    let cipher = Aes128CbcEnc::new(key.0.as_ref().into(), iv.0.as_ref().into());
+pub(crate) fn encrypt(data: Bytes, key: &Key, iv: &Iv, identity: String) -> Result<Bytes, Error> {
+    let id_key = xor(key.0.as_ref(), identity.as_ref());
+    let cipher = Aes128CbcEnc::new(id_key.as_ref().into(), iv.0.as_ref().into());
     Ok(Bytes::from(cipher.encrypt_padded_vec_mut::<Pkcs7>(&data)))
 }
 
-pub(crate) fn decrypt(encrypted_data: Bytes, key: &Key, iv: &Iv) -> Result<Bytes, Error> {
-    let cipher = Aes128CbcDec::new(key.0.as_ref().into(), iv.0.as_ref().into());
+pub(crate) fn decrypt(encrypted_data: Bytes, key: &Key, iv: &Iv, identity: String) -> Result<Bytes, Error> {
+    let id_key = xor(key.0.as_ref(), identity.as_ref());
+    let cipher = Aes128CbcDec::new(id_key.as_ref().into(), iv.0.as_ref().into());
     match cipher.decrypt_padded_vec_mut::<Pkcs7>(encrypted_data.as_ref()) {
         Ok(vec) => Ok(Bytes::from(vec)),
         Err(err) => Err(Error::Decryption(format!(
@@ -51,4 +53,13 @@ pub(crate) fn decrypt(encrypted_data: Bytes, key: &Key, iv: &Iv) -> Result<Bytes
             err
         ))),
     }
+}
+
+fn xor(a: &[u8], b: &[u8]) -> Bytes {
+    let vec: Vec<_> = a
+        .iter()
+        .zip(b.iter().cycle())
+        .map(|(&x, &y)| x ^ y)
+        .collect();
+    Bytes::from(vec)
 }

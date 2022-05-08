@@ -97,7 +97,7 @@ pub fn deserialise<T>(data: &[u8]) -> Result<T, Error>
 /// Returns an error if the size is too small for self-encryption.
 /// Only files larger than 3072 bytes (3 * MIN_CHUNK_SIZE) can be self-encrypted.
 /// Smaller files will have to be batched together for self-encryption to work.
-pub fn encrypt(bytes: Bytes) -> Result<(DataMap, Vec<EncryptedChunk>)> {
+pub fn encrypt(bytes: Bytes, identity: String) -> Result<(DataMap, Vec<EncryptedChunk>)> {
     if (MIN_ENCRYPTABLE_BYTES) > bytes.len() {
         return Err(Error::Generic(format!(
             "Too small for self-encryption! Required size at least {}",
@@ -105,7 +105,7 @@ pub fn encrypt(bytes: Bytes) -> Result<(DataMap, Vec<EncryptedChunk>)> {
         )));
     }
     let (num_chunks, batches) = chunk::batch_chunks(bytes);
-    let (data_map, encrypted_chunks) = encrypt::encrypt(batches);
+    let (data_map, encrypted_chunks) = encrypt::encrypt(batches, identity);
     if num_chunks > encrypted_chunks.len() {
         return Err(Error::Encryption);
     }
@@ -113,14 +113,14 @@ pub fn encrypt(bytes: Bytes) -> Result<(DataMap, Vec<EncryptedChunk>)> {
 }
 
 /// Decrypts what is expected to be the full set of chunks covered by the data map.
-pub fn decrypt_full_set(data_map: &DataMap, chunks: &[EncryptedChunk]) -> Result<Bytes> {
+pub fn decrypt_full_set(data_map: &DataMap, chunks: &[EncryptedChunk], identity: String) -> Result<Bytes> {
     let src_hashes = extract_hashes(data_map);
     let sorted_chunks = chunks
         .iter()
         .sorted_by_key(|c| c.index)
         .cloned() // should not be needed, something is wrong here, the docs for sorted_by_key says it will return owned items...!
         .collect_vec();
-    decrypt::decrypt(src_hashes, sorted_chunks)
+    decrypt::decrypt(src_hashes, sorted_chunks, identity)
 }
 
 /// Helper function to XOR a data with a pad (pad will be rotated to fill the length)

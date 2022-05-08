@@ -23,7 +23,7 @@ use crate::self_encryption::{
 use crate::self_encryption::lib::{COMPRESSION_QUALITY, DataMap, EncryptedChunk, get_pad_key_and_iv, xor};
 
 /// Encrypt the chunks
-pub(crate) fn encrypt(batches: Vec<EncryptionBatch>) -> (DataMap, Vec<EncryptedChunk>) {
+pub(crate) fn encrypt(batches: Vec<EncryptionBatch>, identity: String) -> (DataMap, Vec<EncryptedChunk>) {
     let src_hashes = Arc::new(
         batches
             .iter()
@@ -46,7 +46,7 @@ pub(crate) fn encrypt(batches: Vec<EncryptionBatch>) -> (DataMap, Vec<EncryptedC
 
                     let src_size = data.len();
                     let pki = get_pad_key_and_iv(index, src_hashes.as_ref());
-                    let encrypted_content = encrypt_chunk(data, pki).unwrap();
+                    let encrypted_content = encrypt_chunk(data, pki, identity.clone()).unwrap();
                     let dst_hash = XorName::from_content(encrypted_content.as_ref());
 
                     (
@@ -70,7 +70,7 @@ pub(crate) fn encrypt(batches: Vec<EncryptionBatch>) -> (DataMap, Vec<EncryptedC
     (DataMap::new(keys), chunks)
 }
 
-fn encrypt_chunk(content: Bytes, pki: (Pad, Key, Iv)) -> Result<Bytes> {
+fn encrypt_chunk(content: Bytes, pki: (Pad, Key, Iv), identity: String) -> Result<Bytes> {
     let (pad, key, iv) = pki;
     let mut compressed = vec![];
     let enc_params = BrotliEncoderParams {
@@ -83,6 +83,6 @@ fn encrypt_chunk(content: Bytes, pki: (Pad, Key, Iv)) -> Result<Bytes> {
         &enc_params,
     )
         .map_err(|_| Error::Compression)?;
-    let encrypted = encryption::encrypt(Bytes::from(compressed), &key, &iv)?;
+    let encrypted = encryption::encrypt(Bytes::from(compressed), &key, &iv, identity)?;
     Ok(xor(encrypted, &pad))
 }
