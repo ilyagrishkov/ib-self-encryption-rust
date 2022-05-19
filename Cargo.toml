@@ -17,6 +17,7 @@ rand_chacha = "~0.3.1"
 err-derive = "~0.3.1"
 itertools = "~0.10.0"
 ibe = "0.1.4"
+serde_json = "1.0.81"
 
 [dependencies.brotli]
 version = "~3.3.0"
@@ -40,4 +41,4 @@ version = "1.17.0"
 features = ["macros", "sync", "io-util", "rt", "rt-multi-thread"]
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["lib","cdylib"]

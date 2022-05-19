@@ -59,9 +59,6 @@ impl DiskBasedStorage {
         let path = self.calculate_path(name);
         let mut file = File::create(&path)?;
         file.write_all(&data[..])
-            .map(|_| {
-                println!("Chunk written to {:?}", path);
-            })
             .map_err(From::from)
     }
 }
@@ -101,7 +98,7 @@ pub extern fn self_encrypt(filepath_ptr: *mut c_char, identity_ptr: *mut c_char)
             Ok(mut file) => {
                 let encoded = serialise(&data_map).unwrap();
                 match file.write_all(&encoded[..]) {
-                    Ok(_) => println!("Data map written to {:?}", data_map_file),
+                    Ok(_) => {},
                     Err(error) => {
                         println!(
                             "Failed to write data map to {:?} - {:?}",
@@ -168,9 +165,7 @@ pub extern fn self_decrypt(destination: *mut c_char, identity_ptr: *mut c_char) 
                             .unwrap();
                     match file.write_all(&content[..]) {
                         Err(error) => println!("File write failed - {:?}", error),
-                        Ok(_) => {
-                            println!("File decrypted to {:?}", write_path)
-                        }
+                        Ok(_) => {}
                     };
                 } else {
                     println!("Failed to create {}", (write_path));
