@@ -20,7 +20,7 @@ use xor_name::XorName;
 #[allow(unused_imports)]
 use crate::rustgo::{allocate, deallocate, get_byte_vec, get_string, return_string};
 
-mod rustgo;
+pub mod rustgo;
 mod self_encryption;
 
 fn to_hex(ch: u8) -> String {
