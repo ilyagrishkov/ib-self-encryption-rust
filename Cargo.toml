@@ -42,3 +42,10 @@ features = ["macros", "sync", "io-util", "rt", "rt-multi-thread"]
 
 [lib]
 crate-type = ["lib","cdylib"]
+
+[profile.dev]
+lto = true
+
+[profile.release]
+lto = true
+opt-level = 3
